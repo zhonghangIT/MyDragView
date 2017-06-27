@@ -8,10 +8,6 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 
 /**
  * <pre>
@@ -61,11 +57,9 @@ public class DragViewContainer extends ViewGroup {
             public boolean tryCaptureView(View child, int pointerId) {
                 //此处返回值表示可以拖动的控件
                 if (child instanceof DragView) {
-                    if (((DragView) child).isScale()) {
-                        return false;
-                    }
+                    return ((DragView) child).isChecked()&&!((DragView) child).isScaling();
                 }
-                return true;
+                return false;
             }
 
             @Override
@@ -110,7 +104,7 @@ public class DragViewContainer extends ViewGroup {
             View child = getChildAt(i);
             int width = child.getMeasuredWidth();
             int height = child.getMeasuredHeight();
-            ViewGroup.LayoutParams params= child.getLayoutParams();
+            ViewGroup.LayoutParams params = child.getLayoutParams();
             child.layout(child.getLeft(), child.getTop(), child.getLeft() + width, height + child.getTop());
 //            child.layout((int) child.getX(), (int) child.getY(), (int) (child.getX() + width), (int) (height + child.getY()));
         }

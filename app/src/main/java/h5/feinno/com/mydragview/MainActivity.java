@@ -3,8 +3,6 @@ package h5.feinno.com.mydragview;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
@@ -19,6 +17,7 @@ public class MainActivity extends AppCompatActivity {
         mDragView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mDragView.setChecked(true);
                 Toast.makeText(MainActivity.this, "测试点击事件", Toast.LENGTH_SHORT).show();
             }
         });
@@ -27,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
         mDragViewContainer.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mDragView.setChecked(false);
                 Toast.makeText(MainActivity.this, "容器点击事件", Toast.LENGTH_SHORT).show();
             }
         });

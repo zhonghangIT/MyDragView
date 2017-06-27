@@ -26,10 +26,6 @@ import android.view.ViewGroup;
  */
 public class DragView extends View {
     /**
-     * 是否为选中状态
-     */
-    private boolean isChecked;
-    /**
      * 绘制选中线的宽度
      */
     private int mLineWidth;
@@ -64,18 +60,17 @@ public class DragView extends View {
     private Paint mPaintBackground;
     private Paint mPaintBorder;
     /**
-     * 添加手势
-     */
-    private ScaleGestureDetector scaleGestureDetector;
-    /**
      * 放大缩小的类型，触控点分为4个角以及4条边，值是mTopLeft，mTopRight等
      */
-    private int mScaleType = -1;
+    private int mScaleType = NORMAL;
     /**
      * 放大缩小的速率，防止闪动
      */
     private static final int mSpeed = 15;
-
+    /**
+     * 点击控件内，未选中任何触控点
+     */
+    public static final int NORMAL = -1;
     /**
      * 左上角
      */
@@ -116,7 +111,7 @@ public class DragView extends View {
     /**
      * 右上角是否响应
      */
-    public boolean mTopRightStatus = true;
+    public boolean mTopRightStatus = false;
     /**
      * 左下角是否响应
      */
@@ -141,6 +136,20 @@ public class DragView extends View {
      * 右边是否响应
      */
     public boolean mRightBordStatus = true;
+
+    private float newX;
+    private float newY;
+    private float oldX;
+    private float oldY;
+    /**
+     * 正在放大缩小，缩放
+     */
+    private boolean mScaling;
+    /**
+     * false为该控件不能拖动且不能放大缩小，不绘制边框
+     * true时绘制边框且能够拖动更换位置与放大缩小
+     */
+    private boolean isChecked;
 
     public DragView(Context context) {
         super(context);
@@ -174,23 +183,6 @@ public class DragView extends View {
         mLineWidth = DensityUtil.dip2px(mContext, 5);
         mLineLong = DensityUtil.dip2px(mContext, 20);
         initPaint();
-        scaleGestureDetector = new ScaleGestureDetector(mContext, new ScaleGestureDetector.OnScaleGestureListener() {
-            @Override
-            public boolean onScale(ScaleGestureDetector detector) {
-
-                return false;
-            }
-
-            @Override
-            public boolean onScaleBegin(ScaleGestureDetector detector) {
-                return false;
-            }
-
-            @Override
-            public void onScaleEnd(ScaleGestureDetector detector) {
-
-            }
-        });
     }
 
     /**
@@ -223,16 +215,18 @@ public class DragView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawRoundRect(new RectF(0, 0, mWidth, mHeight), mLineLong, mLineLong, mPaintBorder);
         canvas.drawRect(mLineLong, mLineLong, mWidth - mLineLong, mHeight - mLineLong, mPaintBackground);
-//        drawTopLeft(canvas);
-//        drawTopRight(canvas);
-//        drawBottomLeft(canvas);
-//        drawBottomRight(canvas);
-//        canvas.drawCircle(mWidth / 2, mLineLong, mLineLong, mPaintLine);
-//        canvas.drawCircle(mWidth / 2, mHeight - mLineLong, mLineLong, mPaintLine);
-//        canvas.drawCircle(mLineLong, mHeight / 2, mLineLong, mPaintLine);
-//        canvas.drawCircle(mWidth - mLineLong, mHeight / 2, mLineLong, mPaintLine);
+        if (isChecked()) {
+            canvas.drawRoundRect(new RectF(0, 0, mWidth, mHeight), mLineLong, mLineLong, mPaintBorder);
+            drawTopLeft(canvas);
+            drawTopRight(canvas);
+            drawBottomLeft(canvas);
+            drawBottomRight(canvas);
+            canvas.drawCircle(mWidth / 2, mLineLong, mLineLong, mPaintLine);
+            canvas.drawCircle(mWidth / 2, mHeight - mLineLong, mLineLong, mPaintLine);
+            canvas.drawCircle(mLineLong, mHeight / 2, mLineLong, mPaintLine);
+            canvas.drawCircle(mWidth - mLineLong, mHeight / 2, mLineLong, mPaintLine);
+        }
     }
 
     /**
@@ -265,6 +259,10 @@ public class DragView extends View {
         canvas.drawLine(mWidth, 0, mWidth, mLineLong, mPaintLine);
     }
 
+    public boolean isScaling() {
+        return mScaling;
+    }
+
     /**
      * 绘制左上角
      *
@@ -275,21 +273,14 @@ public class DragView extends View {
         canvas.drawLine(0, 0, 0, mLineLong, mPaintLine);
     }
 
-    private float newX;
-    private float newY;
-    private float oldX;
-    private float oldY;
-    /**
-     * 确定该控件是否能够进行放大缩小
-     */
-    private boolean scale;
 
-    public boolean isScale() {
-        return scale;
+    public boolean isChecked() {
+        return isChecked;
     }
 
-    public void setScale(boolean scale) {
-        this.scale = scale;
+    public void setChecked(boolean checked) {
+        this.isChecked = checked;
+        invalidate();
     }
 
     @Override
@@ -297,13 +288,18 @@ public class DragView extends View {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 //八个范围返回true
-                newX = event.getX();
-                newY = event.getY();
-                mScaleType = getScaleType(event);
+                if (isChecked) {
+                    newX = event.getX();
+                    newY = event.getY();
+                    mScaleType = getScaleType(event);
+                    if (mScaleType != NORMAL) {
+                        mScaling = true;
+                    }
+                }
                 break;
             case MotionEvent.ACTION_MOVE:
-                Log.d("========", "=========" + scale + mScaleType);
-                if (mScaleType != -1) {
+                if (mScaleType != NORMAL && isChecked) {
+                    mScaling = true;
                     oldX = newX;
                     oldY = newY;
                     newX = event.getX();
@@ -316,13 +312,13 @@ public class DragView extends View {
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                mScaleType = -1;
-                scale = false;
+                mScaleType = NORMAL;
+                mScaling = false;
                 break;
             default:
                 break;
         }
-        if (mScaleType != -1) {
+        if (mScaleType != NORMAL) {
             return true;
         }
         return super.onTouchEvent(event);
@@ -348,24 +344,13 @@ public class DragView extends View {
         ViewGroup.LayoutParams params = getLayoutParams();
         switch (mScaleType) {
             case TOP_LEFT:
-                Log.d("---------", "----------------");
-                params.width -= distanceX;
-                params.height -= distanceY;
-                setLayoutParams(params);
-                offsetLeftAndRight(distanceX);
-                offsetTopAndBottom(distanceY);
+                scaleTopLeft(distanceX, distanceY, params);
                 break;
             case TOP_RIGHT:
-                params.width += distanceX;
-                params.height -= distanceY;
-                setLayoutParams(params);
-                offsetTopAndBottom(distanceY);
+                scaleTopRight(distanceX, distanceY, params);
                 break;
             case BOTTOM_LEFT:
-                params.width -= distanceX;
-                params.height += distanceY;
-                setLayoutParams(params);
-                offsetLeftAndRight(distanceX);
+                scaleBottomLeft(distanceX, distanceY, params);
                 break;
             case BOTTOM_RIGHT:
                 params.width += distanceX;
@@ -393,6 +378,29 @@ public class DragView extends View {
         }
     }
 
+    private void scaleBottomLeft(int distanceX, int distanceY, ViewGroup.LayoutParams params) {
+        params.width -= distanceX;
+        params.height += distanceY;
+        setLayoutParams(params);
+        offsetLeftAndRight(distanceX);
+    }
+
+    private void scaleTopRight(int distanceX, int distanceY, ViewGroup.LayoutParams params) {
+        params.width += distanceX;
+        params.height -= distanceY;
+        setLayoutParams(params);
+        offsetTopAndBottom(distanceY);
+    }
+
+    private void scaleTopLeft(int distanceX, int distanceY, ViewGroup.LayoutParams params) {
+        Log.d("---------", "----------------");
+        params.width -= distanceX;
+        params.height -= distanceY;
+        setLayoutParams(params);
+        offsetLeftAndRight(distanceX);
+        offsetTopAndBottom(distanceY);
+    }
+
     /**
      * 根据触控点确认哪个点响应该事件,在点击事件的ACTION_DOWN时确定响应的点
      *
@@ -403,8 +411,7 @@ public class DragView extends View {
         float x = event.getX();
         float y = event.getY();
         //左上角的标准
-        if (mTopLeftStatus && x > 0 && x < mLineLong && y > 0 && y < mLineLong) {
-            scale = true;
+        if (x > 0 && x < mLineLong && y > 0 && y < mLineLong) {
             return TOP_LEFT;
         }
         ViewGroup.LayoutParams params = getLayoutParams();
@@ -412,40 +419,33 @@ public class DragView extends View {
         int width = params.width;
         int height = params.height;
         //右上角标准
-        if (mTopRightStatus && x > width - mLineLong && x < width && y > 0 && y < mLineLong) {
-            scale = true;
+        if ( x > width - mLineLong && x < width && y > 0 && y < mLineLong) {
             return TOP_RIGHT;
         }
         //左下角
-        if (mBottomLeftStatus && x > 0 && x < mLineLong && y > height - mLineLong && y < height) {
-            scale = true;
+        if ( x > 0 && x < mLineLong && y > height - mLineLong && y < height) {
             return BOTTOM_LEFT;
         }
         //右下角
-        if (mBottomRightStatus && x > width - mLineLong && x < width && y > height - mLineLong && y < height) {
-            scale = true;
+        if ( x > width - mLineLong && x < width && y > height - mLineLong && y < height) {
             return BOTTOM_RIGHT;
         }
         //上边
-        if (mTopBordStatus && x > width / 2 - mLineLong / 2 && x < width / 2 + mLineLong / 2 && y > 0 && y < mLineLong) {
-            scale = true;
+        if ( x > width / 2 - mLineLong / 2 && x < width / 2 + mLineLong / 2 && y > 0 && y < mLineLong) {
             return TOP_BORD;
         }
         //下边
-        if (mBottomBordStatus && x > width / 2 - mLineLong / 2 && x < width / 2 + mLineLong / 2 && y > height - mLineLong && y < height) {
-            scale = true;
+        if ( x > width / 2 - mLineLong / 2 && x < width / 2 + mLineLong / 2 && y > height - mLineLong && y < height) {
             return BOTTOM_BORD;
         }
         //左边
-        if (mLeftBordStatus && x > 0 && x < mLineLong && y > height / 2 - mLineLong / 2 && y < height / 2 + mLineLong / 2) {
-            scale = true;
+        if ( x > 0 && x < mLineLong && y > height / 2 - mLineLong / 2 && y < height / 2 + mLineLong / 2) {
             return LEFT_BORD;
         }
         //右边
-        if (mRightBordStatus && x > width - mLineLong && x < width && y > height / 2 - mLineLong / 2 && y < height / 2 + mLineLong / 2) {
-            scale = true;
+        if ( x > width - mLineLong && x < width && y > height / 2 - mLineLong / 2 && y < height / 2 + mLineLong / 2) {
             return RIGHT_BORD;
         }
-        return -1;
+        return NORMAL;
     }
 }
