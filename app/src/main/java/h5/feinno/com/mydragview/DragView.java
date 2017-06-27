@@ -9,9 +9,7 @@ import android.graphics.RectF;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
-import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -299,7 +297,6 @@ public class DragView extends View {
                 break;
             case MotionEvent.ACTION_MOVE:
                 if (mScaleType != NORMAL && isChecked) {
-                    mScaling = true;
                     oldX = newX;
                     oldY = newY;
                     newX = event.getX();
@@ -353,29 +350,54 @@ public class DragView extends View {
                 scaleBottomLeft(distanceX, distanceY, params);
                 break;
             case BOTTOM_RIGHT:
-                params.width += distanceX;
-                params.height += distanceY;
-                setLayoutParams(params);
+                scaleBottomRight(distanceX, distanceY, params);
                 break;
             case TOP_BORD:
-                params.height -= distanceY;
-                setLayoutParams(params);
-                offsetTopAndBottom(distanceY);
+                scaleTopBord(distanceY, params);
                 break;
             case BOTTOM_BORD:
-                params.height += distanceY;
-                setLayoutParams(params);
+                scaleBottomBord(distanceY, params);
                 break;
             case LEFT_BORD:
-                params.width -= distanceX;
-                setLayoutParams(params);
-                offsetLeftAndRight(distanceX);
+                scaleLeftBord(distanceX, params);
                 break;
             case RIGHT_BORD:
-                params.width += distanceX;
-                setLayoutParams(params);
+                scaleRightBord(distanceX, params);
                 break;
         }
+    }
+
+    private void scaleRightBord(int distanceX, ViewGroup.LayoutParams params) {
+        params.width += distanceX;
+        setLayoutParams(params);
+        mScaling = true;
+    }
+
+    private void scaleLeftBord(int distanceX, ViewGroup.LayoutParams params) {
+        params.width -= distanceX;
+        setLayoutParams(params);
+        offsetLeftAndRight(distanceX);
+        mScaling = true;
+    }
+
+    private void scaleBottomBord(int distanceY, ViewGroup.LayoutParams params) {
+        params.height += distanceY;
+        setLayoutParams(params);
+        mScaling = true;
+    }
+
+    private void scaleTopBord(int distanceY, ViewGroup.LayoutParams params) {
+        params.height -= distanceY;
+        setLayoutParams(params);
+        offsetTopAndBottom(distanceY);
+        mScaling = true;
+    }
+
+    private void scaleBottomRight(int distanceX, int distanceY, ViewGroup.LayoutParams params) {
+        params.width += distanceX;
+        params.height += distanceY;
+        setLayoutParams(params);
+        mScaling = true;
     }
 
     private void scaleBottomLeft(int distanceX, int distanceY, ViewGroup.LayoutParams params) {
@@ -383,6 +405,7 @@ public class DragView extends View {
         params.height += distanceY;
         setLayoutParams(params);
         offsetLeftAndRight(distanceX);
+        mScaling = true;
     }
 
     private void scaleTopRight(int distanceX, int distanceY, ViewGroup.LayoutParams params) {
@@ -390,15 +413,16 @@ public class DragView extends View {
         params.height -= distanceY;
         setLayoutParams(params);
         offsetTopAndBottom(distanceY);
+        mScaling = true;
     }
 
     private void scaleTopLeft(int distanceX, int distanceY, ViewGroup.LayoutParams params) {
-        Log.d("---------", "----------------");
         params.width -= distanceX;
         params.height -= distanceY;
         setLayoutParams(params);
         offsetLeftAndRight(distanceX);
         offsetTopAndBottom(distanceY);
+        mScaling = true;
     }
 
     /**
@@ -419,31 +443,31 @@ public class DragView extends View {
         int width = params.width;
         int height = params.height;
         //右上角标准
-        if ( x > width - mLineLong && x < width && y > 0 && y < mLineLong) {
+        if (x > width - mLineLong && x < width && y > 0 && y < mLineLong) {
             return TOP_RIGHT;
         }
         //左下角
-        if ( x > 0 && x < mLineLong && y > height - mLineLong && y < height) {
+        if (x > 0 && x < mLineLong && y > height - mLineLong && y < height) {
             return BOTTOM_LEFT;
         }
         //右下角
-        if ( x > width - mLineLong && x < width && y > height - mLineLong && y < height) {
+        if (x > width - mLineLong && x < width && y > height - mLineLong && y < height) {
             return BOTTOM_RIGHT;
         }
         //上边
-        if ( x > width / 2 - mLineLong / 2 && x < width / 2 + mLineLong / 2 && y > 0 && y < mLineLong) {
+        if (x > width / 2 - mLineLong / 2 && x < width / 2 + mLineLong / 2 && y > 0 && y < mLineLong) {
             return TOP_BORD;
         }
         //下边
-        if ( x > width / 2 - mLineLong / 2 && x < width / 2 + mLineLong / 2 && y > height - mLineLong && y < height) {
+        if (x > width / 2 - mLineLong / 2 && x < width / 2 + mLineLong / 2 && y > height - mLineLong && y < height) {
             return BOTTOM_BORD;
         }
         //左边
-        if ( x > 0 && x < mLineLong && y > height / 2 - mLineLong / 2 && y < height / 2 + mLineLong / 2) {
+        if (x > 0 && x < mLineLong && y > height / 2 - mLineLong / 2 && y < height / 2 + mLineLong / 2) {
             return LEFT_BORD;
         }
         //右边
-        if ( x > width - mLineLong && x < width && y > height / 2 - mLineLong / 2 && y < height / 2 + mLineLong / 2) {
+        if (x > width - mLineLong && x < width && y > height / 2 - mLineLong / 2 && y < height / 2 + mLineLong / 2) {
             return RIGHT_BORD;
         }
         return NORMAL;
