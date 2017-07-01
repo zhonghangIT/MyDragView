@@ -1,125 +1,131 @@
 package h5.feinno.com.mydragview;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.PointF;
 import android.os.Build;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v4.widget.ViewDragHelper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <pre>
  *     author : zhonghang
  *     e-mail : zhonghang@feinno.com
  *     time   : 2017/06/21 09:13
- *     desc   : 用于存放拖动的组件的容器
+ *     desc   : 用于存放可以拖动的数据的容器，响应各种事件
  *     version: 1.0
  * </pre>
  */
-
-
-public class DragViewContainer extends ViewGroup {
+public class DragViewContainer extends FrameLayout {
     /**
-     * 用于控制容器内的控件的拖动
+     * 注解的方式声明不同的触控事件
      */
-    private ViewDragHelper mViewDragHelper;
+    @IntDef({
+            ActionMode.NONE, ActionMode.DRAG, ActionMode.ZOOM_WITH_TWO_FINGER, ActionMode.ICON, ActionMode.CLICK
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface ActionMode {
+        int NONE = 0;
+        int DRAG = 1;
+        int ZOOM_WITH_TWO_FINGER = 2;
+        int ICON = 3;
+        int CLICK = 4;
+    }
+
+    @ActionMode
+    private int mode = ActionMode.NONE;
     /**
-     * 用于设置拖动的灵敏度
+     * 存放所有的拖动组件的集合
      */
-    private float mSensitivity = 1.0f;
+    private List<DragView> mDragViewList;
+
+    public List<DragView> getDragViewList() {
+        return mDragViewList;
+    }
 
     public DragViewContainer(Context context) {
         super(context);
-        setup();
+        setUp();
     }
 
     public DragViewContainer(Context context, AttributeSet attrs) {
         super(context, attrs);
-        setup();
+        setUp();
     }
 
     public DragViewContainer(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        setup();
+        setUp();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public DragViewContainer(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
-        setup();
+        setUp();
     }
 
-    private void setup() {
-        mViewDragHelper = ViewDragHelper.create(this, mSensitivity, new ViewDragHelper.Callback() {
-            @Override
-            public boolean tryCaptureView(View child, int pointerId) {
-                //此处返回值表示可以拖动的控件
-                if (child instanceof DragView) {
-                    return ((DragView) child).isChecked()&&!((DragView) child).isScaling();
-                }
-                return false;
-            }
-
-            @Override
-            public int getViewHorizontalDragRange(View child) {
-                return getMeasuredWidth() - child.getMeasuredWidth();
-            }
-
-            @Override
-            public int getViewVerticalDragRange(View child) {
-                return getMeasuredHeight() - child.getMeasuredHeight();
-            }
-
-            @Override
-            public int clampViewPositionHorizontal(View child, int left, int dx) {
-//                拖动控件的横向的left值
-                final int leftBound = getPaddingLeft();
-                final int rightBound = getWidth() - child.getWidth() - leftBound;
-                final int newLeft = Math.min(Math.max(left, leftBound), rightBound);
-                return newLeft;
-            }
-
-            @Override
-            public int clampViewPositionVertical(View child, int top, int dy) {
-//                拖动控件的上下值
-                final int topBound = getPaddingTop();
-                final int bottomBound = getHeight() - child.getHeight() - topBound;
-                final int newTop = Math.min(Math.max(top, topBound), bottomBound);
-                return newTop;
-            }
-
-        });
-    }
-
-    @Override
-    public boolean onInterceptTouchEvent(MotionEvent ev) {
-        return mViewDragHelper.shouldInterceptTouchEvent(ev);
-    }
-
-    @Override
-    protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        for (int i = 0; i < getChildCount(); i++) {
-            View child = getChildAt(i);
-            int width = child.getMeasuredWidth();
-            int height = child.getMeasuredHeight();
-            ViewGroup.LayoutParams params = child.getLayoutParams();
-            child.layout(child.getLeft(), child.getTop(), child.getLeft() + width, height + child.getTop());
-//            child.layout((int) child.getX(), (int) child.getY(), (int) (child.getX() + width), (int) (height + child.getY()));
+    private void setUp() {
+        //初始化存放拖动组件数据的集合
+        if (mDragViewList == null) {
+            mDragViewList = new ArrayList<>();
         }
     }
 
     @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        //对子控件的大小进行测量
-        measureChildren(widthMeasureSpec, heightMeasureSpec);
+    protected void dispatchDraw(Canvas canvas) {
+        super.dispatchDraw(canvas);
+        /**
+         *  ViewGroup中绘制内容在此处进行绘制，和View的onDraw需要区别。
+         *  如果有背景的话ViewGroup也会执行onDraw()方法，在onDraw方法中调用dispathDraw()方法
+         */
+        for (DragView dragView : mDragViewList) {
+            dragView.draw(canvas);
+        }
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        mViewDragHelper.processTouchEvent(event);
+        //是否处理事件
         return super.onTouchEvent(event);
+    }
+
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        //是否拦截事件的处理。点击到内部的拖动组件时拦截事件
+        switch (ev.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                ev.getX();
+                ev.getY();
+                if (findHandlingSticker(ev.getX(), ev.getY()) != null) {
+                    return true;
+                }
+                break;
+        }
+        return super.onInterceptTouchEvent(ev);
+    }
+
+    /**
+     *
+     **/
+    @Nullable
+    protected DragView findHandlingSticker(float x, float y) {
+        for (DragView dragView : mDragViewList) {
+            if (dragView.contains(new PointF(x, y))) {
+                return dragView;
+            }
+        }
+        return null;
     }
 }
