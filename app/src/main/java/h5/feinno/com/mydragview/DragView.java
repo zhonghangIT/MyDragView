@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.os.Build;
@@ -36,8 +37,10 @@ public abstract class DragView {
     public abstract void draw(Canvas canvas);
 
     /**
-     *
-     * @return
+     * 判断该点是否在该控件的范围内
+     * @param x
+     * @param y
+     * @return true 表示在此范围【
      */
-    public abstract  boolean contains(PointF pointF);
+    public abstract boolean contains(float x, float y);
 }

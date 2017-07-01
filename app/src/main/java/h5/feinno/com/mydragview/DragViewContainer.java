@@ -2,6 +2,7 @@ package h5.feinno.com.mydragview;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.os.Build;
 import android.support.annotation.IntDef;
@@ -122,7 +123,7 @@ public class DragViewContainer extends FrameLayout {
     @Nullable
     protected DragView findHandlingSticker(float x, float y) {
         for (DragView dragView : mDragViewList) {
-            if (dragView.contains(new PointF(x, y))) {
+            if (dragView.contains(x, y)) {
                 return dragView;
             }
         }
